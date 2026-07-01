@@ -25,7 +25,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-BOT_TOKEN = "8568388774:AAELegEnda9VKtMgkOazs4VMCTWqYBM1G5M"
+BOT_TOKEN = "8568388774:AAE410jVSLbC5e-7jqMNuGdDAN__xBzWoHw"
 WEBAPP_URL = os.environ.get("WEBAPP_URL")
 
 flask_app = Flask(__name__, static_folder=None)
