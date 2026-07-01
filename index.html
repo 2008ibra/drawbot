@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Нарисуй человека</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #000000);
+    font-family: -apple-system, system-ui, sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  #toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    align-items: center;
+  }
+  #toolbar button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    font-size: 14px;
+  }
+  #canvas-wrap {
+    border: 1px solid #ddd;
+    margin: 0 8px;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+    background: #ffffff;
+    touch-action: none;
+  }
+  #status {
+    padding: 8px;
+    font-size: 13px;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="clearBtn">Очистить</button>
+  <button id="undoBtn">Отменить</button>
+</div>
+<div id="canvas-wrap">
+  <canvas id="canvas"></canvas>
+</div>
+<div id="status">Нарисуй человека и нажми кнопку внизу, чтобы отправить</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
+tg.ready();
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  const toolbarH = document.getElementById('toolbar').offsetHeight;
+  const statusH = document.getElementById('status').offsetHeight;
+  const w = window.innerWidth - 16;
+  const h = window.innerHeight - toolbarH - statusH - 16;
+  // сохраняем содержимое при ресайзе
+  const prev = canvas.width ? canvas.toDataURL() : null;
+  canvas.width = w;
+  canvas.height = h;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#000000';
+  if (prev) {
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0);
+    img.src = prev;
+  }
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+let drawing = false;
+let lastX = 0, lastY = 0;
+let history = [];
+
+function pos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches ? e.touches[0] : e;
+  return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+}
+
+function saveState() {
+  history.push(canvas.toDataURL());
+  if (history.length > 20) history.shift();
+}
+
+function start(e) {
+  e.preventDefault();
+  saveState();
+  drawing = true;
+  const p = pos(e);
+  lastX = p.x; lastY = p.y;
+}
+
+function move(e) {
+  if (!drawing) return;
+  e.preventDefault();
+  const p = pos(e);
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  lastX = p.x; lastY = p.y;
+}
+
+function end(e) {
+  drawing = false;
+}
+
+canvas.addEventListener('mousedown', start);
+canvas.addEventListener('mousemove', move);
+canvas.addEventListener('mouseup', end);
+canvas.addEventListener('mouseleave', end);
+canvas.addEventListener('touchstart', start, { passive: false });
+canvas.addEventListener('touchmove', move, { passive: false });
+canvas.addEventListener('touchend', end);
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  saveState();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+});
+
+document.getElementById('undoBtn').addEventListener('click', () => {
+  if (history.length === 0) return;
+  const last = history.pop();
+  const img = new Image();
+  img.onload = () => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+  };
+  img.src = last;
+});
+
+// Главная кнопка Telegram внизу экрана — отправка рисунка
+tg.MainButton.setText('Отправить рисунок');
+tg.MainButton.show();
+
+tg.MainButton.onClick(async () => {
+  document.getElementById('status').innerText = 'Отправка...';
+  const dataUrl = canvas.toDataURL('image/png');
+  try {
+    const resp = await fetch('/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: dataUrl,
+        initData: tg.initData
+      })
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      document.getElementById('status').innerText = 'Готово! Результат пришёл в чат с ботом.';
+      setTimeout(() => tg.close(), 1200);
+    } else {
+      document.getElementById('status').innerText = 'Ошибка: ' + (result.error || 'неизвестная');
+    }
+  } catch (err) {
+    document.getElementById('status').innerText = 'Ошибка отправки: ' + err.message;
+  }
+});
+</script>
+</body>
+</html>
