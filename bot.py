@@ -1,5 +1,4 @@
 
-
 import threading
 import logging
 import os
@@ -61,11 +60,14 @@ def analyze_drawing(image_bytes: bytes) -> int:
     symmetry = 1.0 - float(np.mean(diff) / 255.0)
  
     # Переводим в очки 1-10
-    contour_score = min(10, max(1, int(num_contours / 4)))
-    fill_score = min(10, max(1, int(fill_ratio * 80)))
-    symmetry_score = min(10, max(1, int(symmetry * 10)))
+    # контуры: 0-5 = 1, 5-10 = 2, ..., 45+ = 10
+    contour_score = min(10, max(1, int(num_contours / 5)))
+    # заполненность: 0-2% = 1, 2-4% = 2, ..., 18%+ = 10
+    fill_score = min(10, max(1, int(fill_ratio * 120)))
+    # симметрия: всегда примерно 0.5-0.8, нормализуем от 0.4 до 0.9
+    symmetry_score = min(10, max(1, int((symmetry - 0.4) / 0.05) + 1))
  
-    score = round((contour_score * 0.5 + fill_score * 0.3 + symmetry_score * 0.2))
+    score = round(contour_score * 0.6 + fill_score * 0.3 + symmetry_score * 0.1)
     return max(1, min(10, score))
  
  
@@ -183,3 +185,4 @@ if __name__ == "__main__":
     t = threading.Thread(target=run_flask, daemon=True)
     t.start()
     run_bot()
+ 
