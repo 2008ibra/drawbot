@@ -52,7 +52,7 @@ def ask_gemini(image_b64: str) -> tuple[int, str]:
 Комментарий должен быть живым, с юмором, как будто друг смотрит на рисунок."""
 
     response = requests.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
         headers={"Content-Type": "application/json"},
         json={
             "contents": [{
