@@ -70,6 +70,7 @@ def ask_gemini(image_b64: str) -> tuple[int, str]:
         timeout=30,
     )
     data = response.json()
+    logging.info(f"Gemini response: {data}")
     text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
     text = text.replace("```json", "").replace("```", "").strip()
     parsed = json.loads(text)
