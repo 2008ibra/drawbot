@@ -175,3 +175,22 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.exception(e)
         text = "Не получилось оценить 😅 Попробуй ещё раз!"
     await update.message.reply_text(text,
+parse_mode="Markdown")
+
+
+async def handle_other(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Пришли фото рисунка! 🖼️")
+
+
+def run_bot():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(~filters.PHOTO, handle_other))
+    app.run_polling(drop_pending_updates=True)
+
+
+if __name__ == "__main__":
+    t = threading.Thread(target=run_flask, daemon=True)
+    t.start()
+    run_bot()
